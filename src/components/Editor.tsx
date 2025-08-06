@@ -31,9 +31,9 @@ export default function Editor() {
                 return newBlocks
             })
             setFocusedBlockId(newBlockId)
+            
         } else if (e.key === "Backspace") { 
             const currentBlock = blocks.find((block) => block.id === blockId)
-            // const currentBlockIndex = blocks.findIndex((block) => block.id === blockId)
 
             if (currentBlock?.content === "" && blocks.length > 1) {
                 e.preventDefault()
