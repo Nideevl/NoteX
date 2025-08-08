@@ -1,66 +1,95 @@
 .container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 2rem;
-  min-height: 100vh;
-  background-color: rgb(27, 27, 27);
-  font-family: sans-serif;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+    background-color: rgb(27, 27, 27);
+    font-family: sans-serif;
 }
 
 .blockList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .block {
-  position: relative;
-  word-break: break-word;
-  white-space: pre-wrap;
-  min-height: 1.5rem;
-  padding: 0.5rem;
-  border-left: 2px solid transparent;
-  transition: border-color 0.2s;
-  color: #c5c5c5;
+    position: relative;
+    word-break: break-word;
+    white-space: pre-wrap;
+    min-height: 1.5rem;
+    padding: 0.5rem;
+    transition: background-color 0.2s, opacity 0.2s;
+    color: #c5c5c5;
+    background: transparent;
+    cursor: text;
 }
 
 .block:hover {
-  border-color: #e5e7eb;
+    background: #e5e7eb21;
 }
 
 .block:focus {
-  border-color: #3b82f6;
-  outline: none;
+    background: #3b83f632;
+    outline: none;
 }
 
-
 .block:empty::after {
-  content: attr(data-placeholder);
-  color: #9ca3af;
-  pointer-events: none;
-  position: absolute;
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    pointer-events: none;
+    position: absolute;
+}
+
+/* Drag and Drop Styles */
+.block[draggable="true"] {
+    cursor: grab;
+}
+
+.block.dragging {
+    opacity: 0.5;
+    border: 1px dashed #9ca3af;
+}
+
+.block.dragOver {
+    border-bottom: 2px solid #3b82f6;
 }
 
 .instructions {
-  margin-top: 3rem;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #4b5563;
+    margin-top: 3rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #4b5563;
 }
 
 .instructions h3 {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
 .instructions ul {
-  list-style: none;
-  padding-left: 0;
-  margin: 0;
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
 }
 
 .instructions li {
-  margin-bottom: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.instructions kbd {
+    background-color: #eee;
+    border-radius: 3px;
+    border: 1px solid #b4b4b4;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 2px 0 0 rgba(255, 255, 255, .7) inset;
+    color: #333;
+    display: inline-block;
+    font-family: monospace;
+    font-size: .85em;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    white-space: nowrap;
 }

@@ -1,117 +1,179 @@
 "use client"
 
-import type React from "react"
-import { useState, useRef, useEffect, type KeyboardEvent } from "react"
-import styles from '@/components/editor.module.css'
+import styles from './editor.module.css'
+import { useRef, useEffect, useState, type KeyboardEvent, type DragEvent } from "react"
+import { cn } from "@/lib/utils"
 
-interface TextBlock {
-  id: string
-  content: string
+interface Block {
+    id: string
+    content: string
 }
 
-export default function Component() {
-  const [blocks, setBlocks] = useState<TextBlock[]>([{ id: "1", content: "" }])
-  const [focusedBlockId, setFocusedBlockId] = useState<string>("1")
-  const blockRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+export default function Editor() {
+    const [blocks, setBlocks] = useState<Block[]>([{ id: "1", content: "" }])
+    const [focusedBlockId, setFocusedBlockId] = useState<string>("1")
+    const blockRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, blockId: string) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
+    // State for drag and drop
+    const [draggedId, setDraggedId] = useState<string | null>(null)
+    const [dragOverId, setDragOverId] = useState<string | null>(null)
 
-      // Create new block
-      const newBlockId = Date.now().toString()
-      const currentBlockIndex = blocks.findIndex((block) => block.id === blockId)
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, blockId: string, index: number) => {
+        if (e.key === "Enter") {
+            e.preventDefault()
 
-      setBlocks((prevBlocks) => {
-        const newBlocks = [...prevBlocks]
-        newBlocks.splice(currentBlockIndex + 1, 0, {
-          id: newBlockId,
-          content: "",
-        })
-        return newBlocks
-      })
+            const newBlockId = Date.now().toString();
 
-      // Focus the new block after it's created
-      setFocusedBlockId(newBlockId)
-    } else if (e.key === "Backspace") {
-      const currentBlock = blocks.find((block) => block.id === blockId)
-      const currentBlockIndex = blocks.findIndex((block) => block.id === blockId)
+            setBlocks((prevBlocks) => {
+                const newBlocks = [...prevBlocks]
+                newBlocks.splice( index + 1, 0 , {
+                    id : newBlockId,
+                    content : ""
+                })
+                return newBlocks
+            })
+            setFocusedBlockId(newBlockId)
+            
+        } else if (e.key === "Backspace") { 
+            const currentBlock = blocks.find((block) => block.id === blockId)
 
-      // If the block is empty and it's not the only block, remove it
-      if (currentBlock?.content === "" && blocks.length > 1) {
-        e.preventDefault()
+            if (currentBlock?.content === "" && blocks.length > 1) {
+                e.preventDefault()
 
-        setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id !== blockId))
+                setBlocks((prevBlocks) => prevBlocks.filter((block) => block.id != blockId))
 
-        // Focus the previous block if it exists, otherwise focus the next one
-        const previousBlock = blocks[currentBlockIndex - 1]
-        const nextBlock = blocks[currentBlockIndex + 1]
+                const previousBlock = blocks[index - 1]
+                const nextBlock = blocks[index + 1]
 
-        if (previousBlock) {
-          setFocusedBlockId(previousBlock.id)
-        } else if (nextBlock) {
-          setFocusedBlockId(nextBlock.id)
+                if (previousBlock) {
+                    setFocusedBlockId(previousBlock.id)
+                } else {
+                    setFocusedBlockId(nextBlock.id)
+                }
+            }
+
+        } else if(e.key === "ArrowUp"){
+            const previousBlock = blocks.find((block) => block.id === blocks[index - 1]?.id)
+            if(previousBlock) setFocusedBlockId(previousBlock.id)
+        } else if(e.key === "ArrowDown"){
+            const nextBlock = blocks.find((block) => block.id === blocks[index + 1]?.id)
+            if(nextBlock) setFocusedBlockId(nextBlock.id)
+    }
+    }
+
+    const handleInput = (e: React.FormEvent<HTMLDivElement>, blockId: string) => {
+        const content = e.currentTarget.textContent || ""
+        setBlocks((prevBlocks) => prevBlocks.map((block) => block.id === blockId ? { ...block, content } : block))
+    }
+
+    const placeHolderText = (index: number, blockId: string) => {
+        if (index === 0 && blocks.length === 1) {
+            return "Start Writing From Here...."
+        } else if (focusedBlockId === blockId) {
+            return "You are here..."
         }
-      }
+        return ""
     }
-  }
 
-  const handleInput = (e: React.FormEvent<HTMLDivElement>, blockId: string) => {
-    const content = e.currentTarget.textContent || ""
+    useEffect(() => {
+        if (focusedBlockId && blockRefs.current[focusedBlockId]) {
+            const element = blockRefs.current[focusedBlockId]
+            if (element) {
+                element.focus()
+                const range = document.createRange() // Okay browser, I’m ready to mark some text — but I haven’t selected anything yet.
+                const selection = window.getSelection() // tells where the cursor is or what text is selected by the user on the page right now
+                if (selection) {
+                    range.selectNodeContents(element) // Selects (highlights) all content inside the given element
+                    range.collapse(false) // Places the cursor at the end of the selected content.
+                    selection.removeAllRanges() // Removes the selection highlight
+                    selection.addRange(range) // Actually show the new cursor/ to tell when to actually apply that range and call the cursor at that desired position
+                }
+            }
+        }
+    }, [focusedBlockId, blocks.length]) // Added blocks.length to dependency array to re-focus after block deletion/addition
 
-    setBlocks((prevBlocks) => prevBlocks.map((block) => (block.id === blockId ? { ...block, content } : block)))
-  }
-
-  const handleFocus = (blockId: string) => {
-    setFocusedBlockId(blockId)
-  }
-
-  // Focus the block when focusedBlockId changes
-  useEffect(() => {
-    if (focusedBlockId && blockRefs.current[focusedBlockId]) {
-      const element = blockRefs.current[focusedBlockId]
-      element?.focus()
-
-      // Move cursor to end of content
-      const range = document.createRange()
-      const selection = window.getSelection()
-      if (element && selection) {
-        range.selectNodeContents(element)
-        range.collapse(false)
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+    // Drag and Drop Handlers
+    const handleDragStart = (e: DragEvent<HTMLDivElement>, blockId: string) => {
+        setDraggedId(blockId)
+        e.dataTransfer.effectAllowed = "move"
+        // Set a dummy data to make drag work in some browsers (e.g., Firefox)
+        e.dataTransfer.setData("text/plain", blockId)
     }
-  }, [focusedBlockId])
 
-return (
-  <div className={styles.container}>
-    <div className={styles.blockList}>
-      {blocks.map((block, index) => (
-        <div
-          key={block.id}
-          ref={(el) => {
-            blockRefs.current[block.id] = el;
-          }}
-          contentEditable
-          suppressContentEditableWarning={true}
-          className={styles.block}
-          data-placeholder={index === 0 ? "Start writing..." : "Type '/' for commands"}
-          onKeyDown={(e) => handleKeyDown(e, block.id)}
-          onInput={(e) => handleInput(e, block.id)}
-          onFocus={() => handleFocus(block.id)}
-        />
-      ))}
-    </div>
+    const handleDragOver = (e: DragEvent<HTMLDivElement>, blockId: string) => {
+        e.preventDefault() // Necessary to allow dropping
+        if (draggedId !== blockId) {
+            setDragOverId(blockId)
+        }
+    }
 
-    <div className={styles.instructions}>
-      <h3>How to use:</h3>
-      <ul>
-        <li>• Press <kbd>Enter</kbd> to create a new block</li>
-        <li>• Press <kbd>Backspace</kbd> on an empty block to delete it</li>
-        <li>• Click on any block to focus and start typing</li>
-      </ul>
-    </div>
-  </div>
-);
+    const handleDragLeave = () => {
+        setDragOverId(null)
+    }
+
+    const handleDrop = (e: DragEvent<HTMLDivElement>, dropTargetId: string) => {
+        e.preventDefault()
+        if (!draggedId || draggedId === dropTargetId) {
+            setDraggedId(null)
+            setDragOverId(null)
+            return
+        }
+
+        setBlocks((prevBlocks) => {
+            const newBlocks = [...prevBlocks]
+            const draggedIndex = newBlocks.findIndex((block) => block.id === draggedId)
+            const dropTargetIndex = newBlocks.findIndex((block) => block.id === dropTargetId)
+
+            if (draggedIndex === -1 || dropTargetIndex === -1) {
+                return prevBlocks // Should not happen
+            }
+
+            const [removed] = newBlocks.splice(draggedIndex, 1)
+            newBlocks.splice(dropTargetIndex, 0, removed)
+
+            return newBlocks
+        })
+
+        setFocusedBlockId(draggedId) // Keep focus on the dragged block after drop
+        setDraggedId(null)
+        setDragOverId(null)
+    }
+
+    const handleDragEnd = () => {
+        setDraggedId(null)
+        setDragOverId(null)
+    }
+
+    return (
+        <div className={styles.container}>
+            <div className={styles.blockList}>
+                {blocks.map((block, index) => (
+                    <div
+                        key={block.id}
+                        ref={(el) => { blockRefs.current[block.id] = el }}
+                        contentEditable
+                        suppressContentEditableWarning={true}
+                        className={cn(
+                            styles.block,
+                            draggedId === block.id && styles.dragging,
+                            dragOverId === block.id && styles.dragOver
+                        )}
+                        data-placeholder={placeHolderText(index, block.id)}
+                        onKeyDown={(e) => handleKeyDown(e, block.id, index)}
+                        onInput={(e) => handleInput(e, block.id)}
+                        onFocus={() => setFocusedBlockId(block.id)}
+                        // Drag and Drop props
+                        draggable="true"
+                        onDragStart={(e) => handleDragStart(e, block.id)}
+                        onDragOver={(e) => handleDragOver(e, block.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, block.id)}
+                        onDragEnd={handleDragEnd}
+                    >
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
 }
+
